@@ -81,7 +81,7 @@ function import() {
 	 *   |- language            (string)    Joomla language parameter for multi-language implementations (en-US)
 	 *   |- metakey             (???)
 	 *   \- metadesc            (???)
-	 * |-sertable (Sermons table)
+	 * |-sertable (Sermons series table)
 	 *   |- id                  (int)       ID of the sermon (1)
 	 *   |- series_name         (string)    Series name (Worship and Wealth)
 	 *   |- series_alias        (string)    Series alias (worship-and-wealth)
@@ -169,15 +169,15 @@ function import() {
 	 *   |- saccess             (???)
 	 *   |- language            (string)    Joomla language parameter for multi-language implementations (en-US)
 	 *   |- audpurchase         (bool)      Allow audio purchase (1|0)
-	 *   |- audpurchase_folder  (???)
+	 *   |- audpurchase_folder  (string)    Audio purchase folder location (media/audio/test.mp3)
 	 *   |- vidpurchase         (bool)      Allow video purchase (1|0)
-	 *   |- vidpurchase_folder  (???)
-	 *   |- audiofs             (???)
-	 *   |- adaudiofs           (???)
-	 *   |- videofs             (???)
-	 *   |- advideofs           (???)
-	 *   |- notesfs             (???)
-	 *   |- slidesfs            (???)
+	 *   |- vidpurchase_folder  (string)    Video purchase folder location (media/audio/test.mp4)
+	 *   |- audiofs             (int)       Audio file size (545433)
+	 *   |- adaudiofs           (int)       Additional audio file size (545433)
+	 *   |- videofs             (int)       Video file size (545433)
+	 *   |- advideofs           (int)       Additional video file size (545433)
+	 *   |- notesfs             (int)       Notes file size (545433)
+	 *   |- slidesfs            (int)       Slides file size (545433)
 	 *   |- audioprice          (???)       Price of the audio (???)
 	 *   |- videoprice          (???)       Price of the video (???)
 	 *   |- metakey             (???)
@@ -214,8 +214,29 @@ function import() {
 	 *   \- languagesel         (???)
 	 */
 
+	$series = array();
+
 	echo "<xmp>";
-	var_dump( $xml );
+	foreach ( $xml->sertable as $sermon ) {
+		$series[ (int) $sermon->id ]["name"]    = (string) $sermon->series_name;
+		$series[ (int) $sermon->id ]["alias"]   = (string) $sermon->series_alias;
+		$series[ (int) $sermon->id ]["sermons"] = array();
+	}
+
+	foreach ( $xml->mestable as $message ) {
+		$series[ (int) $message->series ]["sermons"][ (int) $message->id ]["title"]             = (string) $message->study_name;
+		$series[ (int) $message->series ]["sermons"][ (int) $message->id ]["teacher"]           = (string) $message->teacher;
+		$series[ (int) $message->series ]["sermons"][ (int) $message->id ]["study_description"] = (string) $message->study_description;
+		$series[ (int) $message->series ]["sermons"][ (int) $message->id ]["study_text"]        = (string) $message->study_text;
+		$series[ (int) $message->series ]["sermons"][ (int) $message->id ]["text"]              = (string) $message->text;
+		$series[ (int) $message->series ]["sermons"][ (int) $message->id ]["ministry"]          = (string) $message->ministry;
+		$series[ (int) $message->series ]["sermons"][ (int) $message->id ]["date"]              = (string) $message->publish_up;
+		// TODO
+		// Chapter start/end
+		// Bible verse start/end
+		// Book
+	}
+	print_r( $series );
 	echo "</xmp>";
 
 }
