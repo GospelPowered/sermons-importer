@@ -18,19 +18,25 @@ function si_menu_item() {
 function si_init() { ?>
 	<div class="wrap">
 		<h2>Sermons Importer</h2>
-		<div id="postbox">
+		<form id="postbox" method="post" enctype="multipart/form-data">
 			<p>Select XML file to import:</p>
 			<input type="file" name="data"><br><br>
-			<div class="button button-primary">Import</div>
-		</div>
+			<input class="button button-primary" type="submit" value="Import">
+		</form>
 	</div>
 	<?php
 
-	import();
+	if ( is_uploaded_file( $_FILES['data']['tmp_name'] ) && $_FILES['data']['error'] == 0 ) {
+		//import($_FILES["data"]["tmp_name"]);
+	} else {
+		if ( $_FILES['data']['error'] != 0 ) {
+			echo "Problem with file upload. Error message: " . $_FILES['data']['error'];
+		}
+	}
 }
 
-function import() {
-	$xml = file_get_contents( "/home/nikola/public_html/pibackup_1041_2016-07-05.xml" );
+function import( $file ) {
+	$xml = file_get_contents( $file );
 	$xml = simplexml_load_string( $xml, 'SimpleXMLElement', LIBXML_NOCDATA );
 	if ( $xml->attributes()->type{0} != "pibackup" ) {
 		die( "Not a Preacher backup file" );
@@ -217,29 +223,28 @@ function import() {
 	$series = array();
 	global $wpdb;
 
-	echo "<xmp>";
 	foreach ( $xml->sertable as $sermon ) {
 		$series["series"][ (int) $sermon->id ]["name"]  = (string) $sermon->series_name;
 		$series["series"][ (int) $sermon->id ]["alias"] = (string) $sermon->series_alias;
 
 		// WORKS
-		/*$wpdb->insert($wpdb->prefix . 'terms', array(
+		$wpdb->insert( $wpdb->prefix . 'terms', array(
 			'name' => (string) $sermon->series_name,
 			'slug' => (string) $sermon->series_alias
 		), array(
 			'%s',
 			'%s'
-		));
+		) );
 
-		$series["series"][ (int) $sermon->id ]["newid"]   = (string) $wpdb->insert_id;
+		$series["series"][ (int) $sermon->id ]["newid"] = (string) $wpdb->insert_id;
 
-		$wpdb->insert($wpdb->prefix . 'term_taxonomy', array(
+		$wpdb->insert( $wpdb->prefix . 'term_taxonomy', array(
 			'term_taxonomy_id' => (string) $wpdb->insert_id,
-			'term_id' => (string) $wpdb->insert_id,
-			'taxonomy' => 'wpfc_sermon_series',
-			'description' => '',
-			'parent' => 0,
-			'count' => 0
+			'term_id'          => (string) $wpdb->insert_id,
+			'taxonomy'         => 'wpfc_sermon_series',
+			'description'      => '',
+			'parent'           => 0,
+			'count'            => 0
 		), array(
 			'%d',
 			'%d',
@@ -247,33 +252,33 @@ function import() {
 			'%s',
 			'%d',
 			'%d'
-		));*/
+		) );
 	}
 
 	foreach ( $xml->teachtable as $teacher ) {
-		$series["teachers"][ (int) $teacher->id ]["name"]     = (string) $teacher->teacher_name;
-		$series["teachers"][ (int) $teacher->id ]["lastname"] = (string) $teacher->lastname;
-		$series["teachers"][ (int) $teacher->id ]["alias"]    = (string) $teacher->teacher_alias;
-		$series["teachers"][ (int) $teacher->id ]["image"]    = (string) $teacher->teacher_image_lrg;
+		$series["teacher"][ (int) $teacher->id ]["name"]     = (string) $teacher->teacher_name;
+		$series["teacher"][ (int) $teacher->id ]["lastname"] = (string) $teacher->lastname;
+		$series["teacher"][ (int) $teacher->id ]["alias"]    = (string) $teacher->teacher_alias;
+		$series["teacher"][ (int) $teacher->id ]["image"]    = (string) $teacher->teacher_image_lrg;
 
 		// WORKS
-		/*$wpdb->insert($wpdb->prefix . 'terms', array(
+		$wpdb->insert( $wpdb->prefix . 'terms', array(
 			'name' => (string) $teacher->teacher_name . ' ' . (string) $teacher->lastname,
 			'slug' => (string) $teacher->teacher_alias
 		), array(
 			'%s',
 			'%s'
-		));
+		) );
 
-		$series["teachers"][ (int) $teacher->id ]["newid"]   = (string) $wpdb->insert_id;
+		$series["teacher"][ (int) $teacher->id ]["newid"] = (string) $wpdb->insert_id;
 
-		$wpdb->insert($wpdb->prefix . 'term_taxonomy', array(
+		$wpdb->insert( $wpdb->prefix . 'term_taxonomy', array(
 			'term_taxonomy_id' => (string) $wpdb->insert_id,
-			'term_id' => (string) $wpdb->insert_id,
-			'taxonomy' => 'wpfc_preacher',
-			'description' => '',
-			'parent' => 0,
-			'count' => 0
+			'term_id'          => (string) $wpdb->insert_id,
+			'taxonomy'         => 'wpfc_preacher',
+			'description'      => '',
+			'parent'           => 0,
+			'count'            => 0
 		), array(
 			'%d',
 			'%d',
@@ -281,7 +286,7 @@ function import() {
 			'%s',
 			'%d',
 			'%d'
-		));*/
+		) );
 	}
 
 	foreach ( $xml->mintable as $ministry ) {
@@ -289,23 +294,23 @@ function import() {
 		$series["ministry"][ (int) $ministry->id ]["alias"] = (string) $ministry->ministry_alias;
 
 		// WORKS
-		/*$wpdb->insert($wpdb->prefix . 'terms', array(
+		$wpdb->insert( $wpdb->prefix . 'terms', array(
 			'name' => (string) $ministry->ministry_name,
 			'slug' => (string) $ministry->ministry_alias
 		), array(
 			'%s',
 			'%s'
-		));
+		) );
 
-		$series["teachers"][ (int) $ministry->id ]["newid"]   = (string) $wpdb->insert_id;
+		$series["teachers"][ (int) $ministry->id ]["newid"] = (string) $wpdb->insert_id;
 
-		$wpdb->insert($wpdb->prefix . 'term_taxonomy', array(
+		$wpdb->insert( $wpdb->prefix . 'term_taxonomy', array(
 			'term_taxonomy_id' => (string) $wpdb->insert_id,
-			'term_id' => (string) $wpdb->insert_id,
-			'taxonomy' => 'wpfc_service_type',
-			'description' => '',
-			'parent' => 0,
-			'count' => 0
+			'term_id'          => (string) $wpdb->insert_id,
+			'taxonomy'         => 'wpfc_service_type',
+			'description'      => '',
+			'parent'           => 0,
+			'count'            => 0
 		), array(
 			'%d',
 			'%d',
@@ -313,7 +318,224 @@ function import() {
 			'%s',
 			'%d',
 			'%d'
-		));*/
+		) );
+	}
+
+	$series['study_book'] = array(
+		array(
+			'name' => 'Genesis',
+		),
+		array(
+			'name' => 'Exodus',
+		),
+		array(
+			'name' => 'Leviticus',
+		),
+		array(
+			'name' => 'Numbers',
+		),
+		array(
+			'name' => 'Deuteronomy',
+		),
+		array(
+			'name' => 'Joshua',
+		),
+		array(
+			'name' => 'Judges',
+		),
+		array(
+			'name' => 'Ruth',
+		),
+		array(
+			'name' => '1 Samuel',
+		),
+		array(
+			'name' => '2 Samuel',
+		),
+		array(
+			'name' => '1 Kings',
+		),
+		array(
+			'name' => '2 Kings',
+		),
+		array(
+			'name' => '1 Chronicles',
+		),
+		array(
+			'name' => '2 Chronicles',
+		),
+		array(
+			'name' => 'Ezra',
+		),
+		array(
+			'name' => 'Nehemiah',
+		),
+		array(
+			'name' => 'Esther',
+		),
+		array(
+			'name' => 'Job',
+		),
+		array(
+			'name' => 'Psalm',
+		),
+		array(
+			'name' => 'Proverbs',
+		),
+		array(
+			'name' => 'Ecclesiastes',
+		),
+		array(
+			'name' => 'Song of Songs',
+		),
+		array(
+			'name' => 'Isaiah',
+		),
+		array(
+			'name' => 'Jeremiah',
+		),
+		array(
+			'name' => 'Lamentations',
+		),
+		array(
+			'name' => 'Ezekiel',
+		),
+		array(
+			'name' => 'Daniel',
+		),
+		array(
+			'name' => 'Hosea',
+		),
+		array(
+			'name' => 'Joel',
+		),
+		array(
+			'name' => 'Amos',
+		),
+		array(
+			'name' => 'Obadiah',
+		),
+		array(
+			'name' => 'Jonah',
+		),
+		array(
+			'name' => 'Micah',
+		),
+		array(
+			'name' => 'Nahum',
+		),
+		array(
+			'name' => 'Habakkuk',
+		),
+		array(
+			'name' => 'Zephaniah',
+		),
+		array(
+			'name' => 'Haggai',
+		),
+		array(
+			'name' => 'Zechariah',
+		),
+		array(
+			'name' => 'Malachi',
+		),
+		array(
+			'name' => 'Matthew',
+		),
+		array(
+			'name' => 'Mark',
+		),
+		array(
+			'name' => 'Luke',
+		),
+		array(
+			'name' => 'John',
+		),
+		array(
+			'name' => 'Acts',
+		),
+		array(
+			'name' => 'Romans',
+		),
+		array(
+			'name' => '1 Corinthians',
+		),
+		array(
+			'name' => '2 Corinthians',
+		),
+		array(
+			'name' => 'Galatians',
+		),
+		array(
+			'name' => 'Ephesians',
+		),
+		array(
+			'name' => 'Philippians',
+		),
+		array(
+			'name' => 'Colossians',
+		),
+		array(
+			'name' => '1 Thessalonians',
+		),
+		array(
+			'name' => '2 Thessalonians',
+		),
+		array(
+			'name' => '1 Timothy',
+		),
+		array(
+			'name' => '2 Timothy',
+		),
+		array(
+			'name' => 'Titus',
+		),
+		array(
+			'name' => 'Philemon',
+		),
+		array(
+			'name' => 'Hebrews',
+		),
+		array(
+			'name' => 'James',
+		),
+		array(
+			'name' => '1 Peter',
+		),
+		array(
+			'name' => '2 Peter',
+		),
+		array(
+			'name' => '1 John',
+		),
+		array(
+			'name' => '2 John',
+		),
+		array(
+			'name' => '3 John',
+		),
+		array(
+			'name' => 'Jude',
+		),
+		array(
+			'name' => 'Revelation',
+		),
+		array(
+			'name' => 'Topical',
+		),
+	);
+
+	foreach ( $series['study_book'] as $book ) {
+
+		$wpdb->insert( $wpdb->prefix . 'terms', array(
+			'name' => $book['name'],
+			'slug' => strtolower( str_replace( ' ', '-', $book['name'] ) ),
+		), array(
+			'%s',
+			'%s'
+		) );
+
+		$book['newid'] = $wpdb->insert_id;
 	}
 
 	foreach ( $xml->mestable as $message ) {
@@ -333,11 +555,9 @@ function import() {
 		$series["message"][ (int) $message->id ]["ref_vs_end"]        = (string) $message->ref_vs_end;
 		$series["message"][ (int) $message->id ]["audio_link"]        = (string) $message->audio_link;
 
-		// NOT WORKING YET
-		die();
-		// NOT WORKING YET
+		$message->series     = '{"0": "' . $message->series . '"}';
+		$message->study_book = '{"0": "' . $message->study_book . '"}';
 
-		/** @noinspection PhpUnreachableStatementInspection */
 		$wpdb->insert( $wpdb->prefix . 'posts', array(
 			'post_author'           => get_current_user_id(),
 			'post_date'             => (string) $message->publish_up,
@@ -386,24 +606,46 @@ function import() {
 			'%d',
 		) );
 
-		$wpdb->insert( $wpdb->prefix . 'postmeta', array(
-			'sermon_date'              => strtotime( (string) $message->publish_up ),
-			'wpfc_service_type_select' => 'a:0:{}',
-			//???
-			'bible_passage'            => (string) $message->study_book . ' ' . (string) $message->ref_ch_beg . ':' . (string) $message->ref_vs_beg . '-' . (string) $message->ref_vs_end,
-			// TODO: get book name, not ID
-			'sermon_description'       => (string) $message->study_description,
-			'sermon_audio'             => (string) $message->audio_link
-		), array(
-			'%s',
-			'%s',
-			'%s',
-			'%s',
-			'%s'
-		) );
+		$postdb_id = $wpdb->insert_id;
+
+		foreach (
+			array(
+				'sermon_date'              => strtotime( (string) $message->publish_up ),
+				'wpfc_service_type_select' => 'a:0:{}',
+				'bible_passage'            => (string) $series['study_book'][ json_decode( $message->study_book )->{'0'} ]["name"] . ' ' . (string) $message->ref_ch_beg . ':' . (string) $message->ref_vs_beg . '-' . (string) $message->ref_vs_end . ( (string) $message->ref_ch_beg != (string) $message->ref_ch_end ? ':' . (string) $message->ref_ch_end : '' ),
+				'sermon_description'       => (string) $message->study_description,
+				'sermon_audio'             => (string) $message->audio_link
+			) as $key => $value
+		) {
+			$wpdb->insert( $wpdb->prefix . 'postmeta', array(
+				'post_id'    => $postdb_id,
+				'meta_key'   => $key,
+				'meta_value' => $value
+			), array(
+				'%d',
+				'%s',
+				( $key == 'sermon date' ? '%d' : '%s' )
+			) );
+		}
+
+		foreach ( array( 'teacher', 'series', 'study_book', 'ministry' ) as $data ) {
+			foreach ( json_decode( $message->$data ) as $key => $data_id ) {
+				$wpdb->insert( $wpdb->prefix . 'term_relationships', array(
+					'object_id'        => $postdb_id,
+					'term_taxonomy_id' => $series[ $data ][ $data_id ]['newid'],
+					'term_order'       => $key
+				), array(
+					'%d',
+					'%d',
+					'%d'
+				) );
+			}
+		}
 	}
 
+	echo "done.";
+	/*echo "<xmp>";
 	print_r( $series );
-	echo "</xmp>";
+	echo "</xmp>";*/
 
 }
