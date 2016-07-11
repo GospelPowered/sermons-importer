@@ -27,6 +27,7 @@ function si_init() { ?>
 	<?php
 
 	if ( is_uploaded_file( $_FILES['data']['tmp_name'] ) && $_FILES['data']['error'] == 0 ) {
+		echo "Importing... Do not refresh page!";
 		import( $_FILES["data"]["tmp_name"] );
 	} else {
 		if ( $_FILES['data']['error'] != 0 ) {
