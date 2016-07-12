@@ -608,6 +608,24 @@ function import( $file ) {
 
 		$postdb_id = $wpdb->insert_id;
 
+		foreach ( json_decode( $message['teacher'] ) as $teacher ) {
+			$count = $wpdb->get_var( '
+				SELECT "count" 
+				FROM ' . $wpdb->prefix . 'wp_term_taxonomy
+				WHERE id = ' . $series['teacher'][ $teacher ]['newid']
+			);
+
+			$wpdb->update( $wpdb->prefix . 'wp_term_taxonomy', array(
+				'count' => $count + 1
+			), array(
+				'term_id' => $series['teacher'][ $teacher ]['newid']
+			), array(
+				'%d'
+			), array(
+				'%d'
+			) );
+		}
+
 		foreach (
 			array(
 				'sermon_date'              => strtotime( (string) $message->publish_up ),
