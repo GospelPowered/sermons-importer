@@ -525,7 +525,7 @@ function import( $file ) {
 		),
 	);
 
-	foreach ( $series['study_book'] as $book ) {
+	foreach ( $series['study_book'] as $key => $book ) {
 
 		$wpdb->insert( $wpdb->prefix . 'terms', array(
 			'name' => $book['name'],
@@ -535,7 +535,23 @@ function import( $file ) {
 			'%s'
 		) );
 
-		$book['newid'] = $wpdb->insert_id;
+		$series['study_book'][ $key ]['newid'] = $wpdb->insert_id;
+
+		$wpdb->insert( $wpdb->prefix . 'term_taxonomy', array(
+			'term_taxonomy_id' => (string) $wpdb->insert_id,
+			'term_id'          => (string) $wpdb->insert_id,
+			'taxonomy'         => 'wpfc_bible_book',
+			'description'      => '',
+			'parent'           => 0,
+			'count'            => 0
+		), array(
+			'%d',
+			'%d',
+			'%s',
+			'%s',
+			'%d',
+			'%d'
+		) );
 	}
 
 	foreach ( $xml->mestable as $message ) {
@@ -547,7 +563,7 @@ function import( $file ) {
 		$series["message"][ (int) $message->id ]["study_alias"]       = (string) $message->study_alias;
 		$series["message"][ (int) $message->id ]["text"]              = (string) $message->text;
 		$series["message"][ (int) $message->id ]["ministry"]          = (string) $message->ministry;
-		$series["message"][ (int) $message->id ]["date"]              = (string) $message->publish_up;
+		$series["message"][ (int) $message->id ]["date"]              = (string) $message->study_date;
 		$series["message"][ (int) $message->id ]["study_book"]        = (string) $message->study_book;
 		$series["message"][ (int) $message->id ]["ref_ch_beg"]        = (string) $message->ref_ch_beg;
 		$series["message"][ (int) $message->id ]["ref_ch_end"]        = (string) $message->ref_ch_end;
@@ -560,8 +576,8 @@ function import( $file ) {
 
 		$wpdb->insert( $wpdb->prefix . 'posts', array(
 			'post_author'           => get_current_user_id(),
-			'post_date'             => (string) $message->publish_up,
-			'post_date_gmt'         => (string) $message->publish_up,
+			'post_date'             => (string) $message->study_date,
+			'post_date_gmt'         => (string) $message->study_date,
 			'post_content'          => '',
 			'post_title'            => (string) $message->study_name,
 			'post_excerpt'          => '',
@@ -572,8 +588,8 @@ function import( $file ) {
 			'post_name'             => (string) $message->study_alias,
 			'to_ping'               => '',
 			'pinged'                => '',
-			'post_modified'         => (string) $message->publish_up,
-			'post_modified_gmt'     => (string) $message->publish_up,
+			'post_modified'         => (string) $message->study_date,
+			'post_modified_gmt'     => (string) $message->study_date,
 			'post_content_filtered' => '',
 			'post_parent'           => 0,
 			'guid'                  => get_site_url() . '/?post_type=wpfc_sermon&#038;p=' . $wpdb->insert_id,
@@ -608,27 +624,9 @@ function import( $file ) {
 
 		$postdb_id = $wpdb->insert_id;
 
-		foreach ( json_decode( $message['teacher'] ) as $teacher ) {
-			$count = $wpdb->get_var( '
-				SELECT "count" 
-				FROM ' . $wpdb->prefix . 'wp_term_taxonomy
-				WHERE id = ' . $series['teacher'][ $teacher ]['newid']
-			);
-
-			$wpdb->update( $wpdb->prefix . 'wp_term_taxonomy', array(
-				'count' => $count + 1
-			), array(
-				'term_id' => $series['teacher'][ $teacher ]['newid']
-			), array(
-				'%d'
-			), array(
-				'%d'
-			) );
-		}
-
 		foreach (
 			array(
-				'sermon_date'              => strtotime( (string) $message->publish_up ),
+				'sermon_date'              => strtotime( (string) $message->study_date ),
 				'wpfc_service_type_select' => 'a:0:{}',
 				'bible_passage'            => (string) $series['study_book'][ json_decode( $message->study_book )->{'0'} ]["name"] . ' ' . (string) $message->ref_ch_beg . ':' . (string) $message->ref_vs_beg . '-' . (string) $message->ref_vs_end . ( (string) $message->ref_ch_beg != (string) $message->ref_ch_end ? ':' . (string) $message->ref_ch_end : '' ),
 				'sermon_description'       => (string) $message->study_description,
@@ -657,6 +655,26 @@ function import( $file ) {
 					'%d',
 					'%d'
 				) );
+
+				if ( $data != 'ministry' ) {
+					$count = $wpdb->get_var( '
+						SELECT `count`+1 
+						FROM `' . $wpdb->prefix . 'term_taxonomy`
+						WHERE `term_id` = ' . $series[ $data ][ $data_id ]['newid']
+					);
+
+					$wpdb->update( $wpdb->prefix . 'term_taxonomy', array(
+						'count' => $count
+					), array(
+						'term_id' => $series[ $data ][ $data_id ]['newid']
+					), array(
+						'%d'
+					), array(
+						'%d'
+					) );
+
+					$wpdb->flush();
+				}
 			}
 		}
 	}
