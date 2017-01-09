@@ -1,5 +1,5 @@
 # WP Sermons Importer
-This plugin is used to import sermons from Joomla Preachit's exported XML file.
+This plugin is used to import sermons from Joomla [Preachit](https://extensions.joomla.org/extension/preachit)'s exported XML file to WordPress [Sermon Manager](https://wordpress.org/plugins/sermon-manager-for-wordpress/) plugin.
 
 So far it has been used only internally, but it might be useful to you too!
 
