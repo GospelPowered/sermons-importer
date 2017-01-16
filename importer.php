@@ -3,7 +3,7 @@
 Plugin Name: Sermons Importer
 Plugin URI: http://gospelpowered.com
 Description: A plugin used to import sermons from Joomla's Preachit plugin
-Version: 1.0.1
+Version: 1.0.2
 Author: Gospel Powered
 Author URI: http://gospelpowered.com
 License: MIT
@@ -302,7 +302,7 @@ function import( $file ) {
 			'%s'
 		) );
 
-		$series["teachers"][ (int) $ministry->id ]["newid"] = (string) $wpdb->insert_id;
+		$series["ministry"][ (int) $ministry->id ]["newid"] = (string) $wpdb->insert_id;
 
 		$wpdb->insert( $wpdb->prefix . 'term_taxonomy', array(
 			'term_taxonomy_id' => (string) $wpdb->insert_id,
@@ -656,25 +656,25 @@ function import( $file ) {
 					'%d'
 				) );
 
-				if ( $data != 'ministry' ) {
-					$count = $wpdb->get_var( '
+
+				$count = $wpdb->get_var( '
 						SELECT `count`+1 
 						FROM `' . $wpdb->prefix . 'term_taxonomy`
 						WHERE `term_id` = ' . $series[ $data ][ $data_id ]['newid']
-					);
+				);
 
-					$wpdb->update( $wpdb->prefix . 'term_taxonomy', array(
-						'count' => $count
-					), array(
-						'term_id' => $series[ $data ][ $data_id ]['newid']
-					), array(
-						'%d'
-					), array(
-						'%d'
-					) );
+				$wpdb->update( $wpdb->prefix . 'term_taxonomy', array(
+					'count' => $count
+				), array(
+					'term_id' => $series[ $data ][ $data_id ]['newid']
+				), array(
+					'%d'
+				), array(
+					'%d'
+				) );
 
-					$wpdb->flush();
-				}
+				$wpdb->flush();
+
 			}
 		}
 	}
