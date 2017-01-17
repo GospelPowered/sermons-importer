@@ -3,7 +3,7 @@
 Plugin Name: Sermons Importer
 Plugin URI: http://gospelpowered.com
 Description: A plugin used to import sermons from Joomla's Preachit plugin
-Version: 1.0.2
+Version: 1.0.3
 Author: Gospel Powered
 Author URI: http://gospelpowered.com
 License: MIT
@@ -628,7 +628,7 @@ function import( $file ) {
 			array(
 				'sermon_date'              => strtotime( (string) $message->study_date ),
 				'wpfc_service_type_select' => 'a:0:{}',
-				'bible_passage'            => (string) $series['study_book'][ json_decode( $message->study_book )->{'0'} + 1 ]["name"] . ' ' . (string) $message->ref_ch_beg . ':' . (string) $message->ref_vs_beg . '-' . (string) $message->ref_vs_end . ( (string) $message->ref_ch_beg != (string) $message->ref_ch_end ? ':' . (string) $message->ref_ch_end : '' ),
+				'bible_passage'            => (string) $series['study_book'][ json_decode( $message->study_book )->{'0'} - 1 ]["name"] . ' ' . (string) $message->ref_ch_beg . ':' . (string) $message->ref_vs_beg . '-' . (string) $message->ref_vs_end . ( (string) $message->ref_ch_beg != (string) $message->ref_ch_end ? ':' . (string) $message->ref_ch_end : '' ),
 				'sermon_description'       => (string) $message->study_description,
 				'sermon_audio'             => (string) $message->audio_link
 			) as $key => $value
@@ -648,7 +648,7 @@ function import( $file ) {
 			foreach ( json_decode( $message->$data ) as $key => $data_id ) {
 				$wpdb->insert( $wpdb->prefix . 'term_relationships', array(
 					'object_id'        => $postdb_id,
-					'term_taxonomy_id' => $series[ $data ][ $data_id ]['newid'],
+					'term_taxonomy_id' => $series[ $data ][ $data === 'study_book' ? $data_id - 1 : $data_id ]['newid'],
 					'term_order'       => $key
 				), array(
 					'%d',
