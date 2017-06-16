@@ -12,7 +12,7 @@ License: MIT
 add_action( 'admin_menu', 'si_menu_item' );
 
 function si_menu_item() {
-	add_options_page( "Sermons Importer", "Sermons Importer", "manage_options", "sermons-importer", "si_init" );
+	add_management_page( "Sermons Importer", "Sermons Importer", "manage_options", "sermons-importer", "si_init" );
 }
 
 function si_init() { ?>
