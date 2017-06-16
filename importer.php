@@ -3,7 +3,7 @@
 Plugin Name: Sermons Importer
 Plugin URI: http://gospelpowered.com
 Description: A plugin used to import sermons from Joomla's Preachit plugin
-Version: 1.0.3
+Version: 1.0.4
 Author: Gospel Powered
 Author URI: http://gospelpowered.com
 License: MIT
@@ -16,15 +16,19 @@ function si_menu_item() {
 }
 
 function si_init() { ?>
-	<div class="wrap">
-		<h2>Sermons Importer</h2>
-		<form id="postbox" method="post" enctype="multipart/form-data">
-			<p>Select XML file to import:</p>
-			<input type="file" name="data"><br><br>
-			<input class="button button-primary" type="submit" value="Import">
-		</form>
-	</div>
+    <div class="wrap">
+        <h2>Sermons Importer</h2>
+        <form id="postbox" method="post" enctype="multipart/form-data">
+            <p>Select XML file to import:</p>
+            <input type="file" name="data"><br><br>
+            <input class="button button-primary" type="submit" value="Import">
+        </form>
+    </div>
 	<?php
+
+	if ( empty( $_FILES ) ) {
+		return;
+	}
 
 	if ( is_uploaded_file( $_FILES['data']['tmp_name'] ) && $_FILES['data']['error'] == 0 ) {
 		import( $_FILES["data"]["tmp_name"] );
