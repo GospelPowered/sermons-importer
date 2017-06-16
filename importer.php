@@ -228,23 +228,23 @@ function import( $file ) {
 	global $wpdb;
 
 	foreach ( $xml->sertable as $sermon ) {
-		$series["series"][ (int) $sermon->id ]["name"]  = (string) $sermon->series_name;
-		$series["series"][ (int) $sermon->id ]["alias"] = (string) $sermon->series_alias;
+		$series["series"][ (int) $sermon->id ]["name"]  = ! empty( (string) $sermon->series_name ) ? (string) $sermon->series_name : (string) $sermon->name;
+		$series["series"][ (int) $sermon->id ]["alias"] = ! empty( (string) $sermon->series_alias ) ? (string) $sermon->series_alias : (string) $sermon->alias;
 
 		// WORKS
 		$wpdb->insert( $wpdb->prefix . 'terms', array(
-			'name' => (string) $sermon->series_name,
-			'slug' => (string) $sermon->series_alias
+			'name' => $series["series"][ (int) $sermon->id ]["name"],
+			'slug' => $series["series"][ (int) $sermon->id ]["alias"]
 		), array(
 			'%s',
 			'%s'
 		) );
 
-		$series["series"][ (int) $sermon->id ]["newid"] = (string) $wpdb->insert_id;
+		$series["series"][ (int) $sermon->id ]["newid"] = (int) $wpdb->insert_id;
 
 		$wpdb->insert( $wpdb->prefix . 'term_taxonomy', array(
-			'term_taxonomy_id' => (string) $wpdb->insert_id,
-			'term_id'          => (string) $wpdb->insert_id,
+			'term_taxonomy_id' => (int) $wpdb->insert_id,
+			'term_id'          => (int) $wpdb->insert_id,
 			'taxonomy'         => 'wpfc_sermon_series',
 			'description'      => '',
 			'parent'           => 0,
@@ -260,25 +260,25 @@ function import( $file ) {
 	}
 
 	foreach ( $xml->teachtable as $teacher ) {
-		$series["teacher"][ (int) $teacher->id ]["name"]     = (string) $teacher->teacher_name;
+		$series["teacher"][ (int) $teacher->id ]["name"]     = ! empty( (string) $teacher->teacher_name ) ? (string) $teacher->teacher_name : (string) $teacher->name;
 		$series["teacher"][ (int) $teacher->id ]["lastname"] = (string) $teacher->lastname;
-		$series["teacher"][ (int) $teacher->id ]["alias"]    = (string) $teacher->teacher_alias;
+		$series["teacher"][ (int) $teacher->id ]["alias"]    = ! empty( (string) $teacher->teacher_alias ) ? (string) $teacher->teacher_alias : (string) $teacher->alias;
 		$series["teacher"][ (int) $teacher->id ]["image"]    = (string) $teacher->teacher_image_lrg;
 
 		// WORKS
 		$wpdb->insert( $wpdb->prefix . 'terms', array(
-			'name' => (string) $teacher->teacher_name . ' ' . (string) $teacher->lastname,
-			'slug' => (string) $teacher->teacher_alias
+			'name' => $series["teacher"][ (int) $teacher->id ]["name"] . ' ' . (string) $teacher->lastname,
+			'slug' => $series["teacher"][ (int) $teacher->id ]["alias"]
 		), array(
 			'%s',
 			'%s'
 		) );
 
-		$series["teacher"][ (int) $teacher->id ]["newid"] = (string) $wpdb->insert_id;
+		$series["teacher"][ (int) $teacher->id ]["newid"] = (int) $wpdb->insert_id;
 
 		$wpdb->insert( $wpdb->prefix . 'term_taxonomy', array(
-			'term_taxonomy_id' => (string) $wpdb->insert_id,
-			'term_id'          => (string) $wpdb->insert_id,
+			'term_taxonomy_id' => (int) $wpdb->insert_id,
+			'term_id'          => (int) $wpdb->insert_id,
 			'taxonomy'         => 'wpfc_preacher',
 			'description'      => '',
 			'parent'           => 0,
@@ -294,23 +294,23 @@ function import( $file ) {
 	}
 
 	foreach ( $xml->mintable as $ministry ) {
-		$series["ministry"][ (int) $ministry->id ]["name"]  = (string) $ministry->ministry_name;
-		$series["ministry"][ (int) $ministry->id ]["alias"] = (string) $ministry->ministry_alias;
+		$series["ministry"][ (int) $ministry->id ]["name"]  = ! empty( (string) $ministry->ministry_name ) ? (string) $ministry->ministry_name : (string) $ministry->name;
+		$series["ministry"][ (int) $ministry->id ]["alias"] = ! empty( (string) $ministry->ministry_alias ) ? (string) $ministry->ministry_alias : (string) $ministry->alias;
 
 		// WORKS
 		$wpdb->insert( $wpdb->prefix . 'terms', array(
-			'name' => (string) $ministry->ministry_name,
-			'slug' => (string) $ministry->ministry_alias
+			'name' => $series["ministry"][ (int) $ministry->id ]["name"],
+			'slug' => $series["ministry"][ (int) $ministry->id ]["alias"]
 		), array(
 			'%s',
 			'%s'
 		) );
 
-		$series["ministry"][ (int) $ministry->id ]["newid"] = (string) $wpdb->insert_id;
+		$series["ministry"][ (int) $ministry->id ]["newid"] = (int) $wpdb->insert_id;
 
 		$wpdb->insert( $wpdb->prefix . 'term_taxonomy', array(
-			'term_taxonomy_id' => (string) $wpdb->insert_id,
-			'term_id'          => (string) $wpdb->insert_id,
+			'term_taxonomy_id' => (int) $wpdb->insert_id,
+			'term_id'          => (int) $wpdb->insert_id,
 			'taxonomy'         => 'wpfc_service_type',
 			'description'      => '',
 			'parent'           => 0,
@@ -539,11 +539,11 @@ function import( $file ) {
 			'%s'
 		) );
 
-		$series['study_book'][ $key ]['newid'] = $wpdb->insert_id;
+		$series['study_book'][ $key ]['newid'] = (int) $wpdb->insert_id;
 
 		$wpdb->insert( $wpdb->prefix . 'term_taxonomy', array(
-			'term_taxonomy_id' => (string) $wpdb->insert_id,
-			'term_id'          => (string) $wpdb->insert_id,
+			'term_taxonomy_id' => (int) $wpdb->insert_id,
+			'term_id'          => (int) $wpdb->insert_id,
 			'taxonomy'         => 'wpfc_bible_book',
 			'description'      => '',
 			'parent'           => 0,
@@ -559,15 +559,15 @@ function import( $file ) {
 	}
 
 	foreach ( $xml->mestable as $message ) {
-		$series["message"][ (int) $message->id ]["title"]             = (string) $message->study_name;
+		$series["message"][ (int) $message->id ]["title"]             = ! empty( (string) $message->study_name ) ? (string) $message->study_name : (string) $message->name;
 		$series["message"][ (int) $message->id ]["series"]            = (string) $message->series;
 		$series["message"][ (int) $message->id ]["teacher"]           = (string) $message->teacher;
-		$series["message"][ (int) $message->id ]["study_description"] = (string) $message->study_description;
-		$series["message"][ (int) $message->id ]["study_text"]        = (string) $message->study_text;
-		$series["message"][ (int) $message->id ]["study_alias"]       = (string) $message->study_alias;
+		$series["message"][ (int) $message->id ]["study_description"] = ! empty( (string) $message->study_description ) ? (string) $message->study_description : (string) $message->description;
+		$series["message"][ (int) $message->id ]["study_text"]        = ! empty( (string) $message->study_text ) ? (string) $message->study_text : '';
+		$series["message"][ (int) $message->id ]["study_alias"]       = ! empty( (string) $message->study_alias ) ? (string) $message->study_alias : (string) $message->lias;
 		$series["message"][ (int) $message->id ]["text"]              = (string) $message->text;
 		$series["message"][ (int) $message->id ]["ministry"]          = (string) $message->ministry;
-		$series["message"][ (int) $message->id ]["date"]              = (string) $message->study_date;
+		$series["message"][ (int) $message->id ]["date"]              = ! empty( (string) $message->study_date ) ? (string) $message->study_date : (string) $message->date;
 		$series["message"][ (int) $message->id ]["study_book"]        = (string) $message->study_book;
 		$series["message"][ (int) $message->id ]["ref_ch_beg"]        = (string) $message->ref_ch_beg;
 		$series["message"][ (int) $message->id ]["ref_ch_end"]        = (string) $message->ref_ch_end;
@@ -580,20 +580,20 @@ function import( $file ) {
 
 		$wpdb->insert( $wpdb->prefix . 'posts', array(
 			'post_author'           => get_current_user_id(),
-			'post_date'             => (string) $message->study_date,
-			'post_date_gmt'         => (string) $message->study_date,
+			'post_date'             => $series["message"][ (int) $message->id ]["date"],
+			'post_date_gmt'         => $series["message"][ (int) $message->id ]["date"],
 			'post_content'          => '',
-			'post_title'            => (string) $message->study_name,
+			'post_title'            => $series["message"][ (int) $message->id ]["title"],
 			'post_excerpt'          => '',
 			'post_status'           => ( (string) $message->published == 1 ) ? 'publish' : 'draft',
 			'comment_status'        => ( (string) $message->comments == 1 ) ? 'open' : 'closed',
 			'ping_status'           => 'closed',
 			'post_password'         => '',
-			'post_name'             => (string) $message->study_alias,
+			'post_name'             => $series["message"][ (int) $message->id ]["study_alias"],
 			'to_ping'               => '',
 			'pinged'                => '',
-			'post_modified'         => (string) $message->study_date,
-			'post_modified_gmt'     => (string) $message->study_date,
+			'post_modified'         => $series["message"][ (int) $message->id ]["date"],
+			'post_modified_gmt'     => $series["message"][ (int) $message->id ]["date"],
 			'post_content_filtered' => '',
 			'post_parent'           => 0,
 			'guid'                  => get_site_url() . '/?post_type=wpfc_sermon&#038;p=' . $wpdb->insert_id,
@@ -630,10 +630,10 @@ function import( $file ) {
 
 		foreach (
 			array(
-				'sermon_date'              => strtotime( (string) $message->study_date ),
+				'sermon_date'              => strtotime( $series["message"][ (int) $message->id ]["date"] ),
 				'wpfc_service_type_select' => 'a:0:{}',
 				'bible_passage'            => (string) $series['study_book'][ json_decode( $message->study_book )->{'0'} - 1 ]["name"] . ' ' . (string) $message->ref_ch_beg . ':' . (string) $message->ref_vs_beg . '-' . (string) $message->ref_vs_end . ( (string) $message->ref_ch_beg != (string) $message->ref_ch_end ? ':' . (string) $message->ref_ch_end : '' ),
-				'sermon_description'       => (string) $message->study_description,
+				'sermon_description'       => $series["message"][ (int) $message->id ]["study_description"],
 				'sermon_audio'             => (string) $message->audio_link
 			) as $key => $value
 		) {
