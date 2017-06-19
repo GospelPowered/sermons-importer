@@ -224,7 +224,11 @@ function import( $file ) {
 	 *   \- languagesel         (???)
 	 */
 
-	$series = array();
+	$series = array(
+		'series'   => array(),
+		'teacher'  => array(),
+		'ministry' => array(),
+	);
 	global $wpdb;
 
 	foreach ( $xml->sertable as $sermon ) {
@@ -564,7 +568,7 @@ function import( $file ) {
 		$series["message"][ (int) $message->id ]["teacher"]           = (string) $message->teacher;
 		$series["message"][ (int) $message->id ]["study_description"] = ! empty( (string) $message->study_description ) ? (string) $message->study_description : (string) $message->description;
 		$series["message"][ (int) $message->id ]["study_text"]        = ! empty( (string) $message->study_text ) ? (string) $message->study_text : '';
-		$series["message"][ (int) $message->id ]["study_alias"]       = ! empty( (string) $message->study_alias ) ? (string) $message->study_alias : (string) $message->lias;
+		$series["message"][ (int) $message->id ]["study_alias"]       = ! empty( (string) $message->study_alias ) ? (string) $message->study_alias : (string) $message->alias;
 		$series["message"][ (int) $message->id ]["text"]              = (string) $message->text;
 		$series["message"][ (int) $message->id ]["ministry"]          = (string) $message->ministry;
 		$series["message"][ (int) $message->id ]["date"]              = ! empty( (string) $message->study_date ) ? (string) $message->study_date : (string) $message->date;
@@ -577,6 +581,10 @@ function import( $file ) {
 
 		$message->series     = '{"0": "' . $message->series . '"}';
 		$message->study_book = '{"0": "' . $message->study_book . '"}';
+
+		// get the latest post id
+		$post_id = $wpdb->get_var( 'SELECT `ID` FROM ' . $wpdb->prefix . 'posts ORDER BY `ID` DESC LIMIT 1' );
+		$post_id = $post_id === null ? 1 : (int) $post_id + 1;
 
 		$wpdb->insert( $wpdb->prefix . 'posts', array(
 			'post_author'           => get_current_user_id(),
@@ -596,7 +604,7 @@ function import( $file ) {
 			'post_modified_gmt'     => $series["message"][ (int) $message->id ]["date"],
 			'post_content_filtered' => '',
 			'post_parent'           => 0,
-			'guid'                  => get_site_url() . '/?post_type=wpfc_sermon&#038;p=' . $wpdb->insert_id,
+			'guid'                  => get_site_url() . '/?post_type=wpfc_sermon&#038;p=' . $post_id,
 			'menu_order'            => 0,
 			'post_type'             => 'wpfc_sermon',
 			'post_mime_type'        => '',
@@ -632,7 +640,7 @@ function import( $file ) {
 			array(
 				'sermon_date'              => strtotime( $series["message"][ (int) $message->id ]["date"] ),
 				'wpfc_service_type_select' => 'a:0:{}',
-				'bible_passage'            => (string) $series['study_book'][ json_decode( $message->study_book )->{'0'} - 1 ]["name"] . ' ' . (string) $message->ref_ch_beg . ':' . (string) $message->ref_vs_beg . '-' . (string) $message->ref_vs_end . ( (string) $message->ref_ch_beg != (string) $message->ref_ch_end ? ':' . (string) $message->ref_ch_end : '' ),
+				'bible_passage'            => (string) $series['study_book'][ json_decode( $message->study_book )->{'0'} == 0 ? json_decode( $message->study_book )->{'0'} : json_decode( $message->study_book )->{'0'} - 1 ]["name"] . ' ' . (string) $message->ref_ch_beg . ':' . (string) $message->ref_vs_beg . '-' . (string) $message->ref_vs_end . ( (string) $message->ref_ch_beg != (string) $message->ref_ch_end ? ':' . (string) $message->ref_ch_end : '' ),
 				'sermon_description'       => $series["message"][ (int) $message->id ]["study_description"],
 				'sermon_audio'             => (string) $message->audio_link
 			) as $key => $value
@@ -650,16 +658,18 @@ function import( $file ) {
 
 		foreach ( array( 'teacher', 'series', 'study_book', 'ministry' ) as $data ) {
 			foreach ( json_decode( $message->$data ) as $key => $data_id ) {
+				if ( $data_id == '' ) {
+					continue;
+				}
 				$wpdb->insert( $wpdb->prefix . 'term_relationships', array(
 					'object_id'        => $postdb_id,
-					'term_taxonomy_id' => $series[ $data ][ $data === 'study_book' ? $data_id - 1 : $data_id ]['newid'],
+					'term_taxonomy_id' => $series[ $data ][ $data === 'study_book' && $data_id != 0 ? $data_id - 1 : $data_id ]['newid'],
 					'term_order'       => $key
 				), array(
 					'%d',
 					'%d',
 					'%d'
 				) );
-
 
 				$count = $wpdb->get_var( '
 						SELECT `count`+1 
@@ -684,8 +694,4 @@ function import( $file ) {
 	}
 
 	echo "done.";
-	/*echo "<xmp>";
-	print_r( $series );
-	echo "</xmp>";*/
-
 }
