@@ -229,7 +229,6 @@ function si_import( $file ) {
 		'teacher'  => array(),
 		'ministry' => array(),
 	);
-	global $wpdb;
 
 	// import series
 	foreach ( $xml->sertable as $ser ) {
