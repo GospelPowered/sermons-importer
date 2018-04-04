@@ -1,13 +1,13 @@
 <?php
-/*
-Plugin Name: Sermons Importer
-Plugin URI: http://gospelpowered.com
-Description: A plugin used to import sermons from Joomla's Preachit plugin
-Version: 1.0.4
-Author: Gospel Powered
-Author URI: http://gospelpowered.com
-License: MIT
-*/
+/**
+ * Plugin Name: Sermons Importer
+ * Plugin URI: http://gospelpowered.com
+ * Description: Tool for importing Joomla's Preachit plugin data into Sermon Manager
+ * Version: 1.1.0
+ * Author: Gospel Powered
+ * Author URI: http://gospelpowered.com
+ * License: MIT
+ */
 
 add_action( 'admin_menu', 'si_menu_item' );
 
@@ -31,19 +31,19 @@ function si_init() { ?>
 	}
 
 	if ( is_uploaded_file( $_FILES['data']['tmp_name'] ) && $_FILES['data']['error'] == 0 ) {
-		import( $_FILES["data"]["tmp_name"] );
+		si_import( $_FILES['data']['tmp_name'] );
 	} else {
 		if ( $_FILES['data']['error'] != 0 ) {
-			echo "Problem with file upload. Error message: " . $_FILES['data']['error'];
+			echo 'Problem with file upload. Error message: ' . $_FILES['data']['error'];
 		}
 	}
 }
 
-function import( $file ) {
+function si_import( $file ) {
 	$xml = file_get_contents( $file );
 	$xml = simplexml_load_string( $xml, 'SimpleXMLElement', LIBXML_NOCDATA );
 	if ( $xml->attributes()->type{0} != "pibackup" ) {
-		die( "Not a Preacher backup file" );
+		die( 'Not a Preachit export file.' );
 	}
 
 	/*
@@ -224,112 +224,92 @@ function import( $file ) {
 	 *   \- languagesel         (???)
 	 */
 
-	$series = array(
+	$mapping = array(
 		'series'   => array(),
 		'teacher'  => array(),
 		'ministry' => array(),
 	);
 	global $wpdb;
 
-	foreach ( $xml->sertable as $sermon ) {
-		$series["series"][ (int) $sermon->id ]["name"]  = ! empty( (string) $sermon->series_name ) ? (string) $sermon->series_name : (string) $sermon->name;
-		$series["series"][ (int) $sermon->id ]["alias"] = ! empty( (string) $sermon->series_alias ) ? (string) $sermon->series_alias : (string) $sermon->alias;
+	// import series
+	foreach ( $xml->sertable as $ser ) {
+		$mapping["series"][ (int) $ser->id ]["name"]  = ! empty( (string) $ser->series_name ) ? (string) $ser->series_name : (string) $ser->name;
+		$mapping["series"][ (int) $ser->id ]["alias"] = ! empty( (string) $ser->series_alias ) ? (string) $ser->series_alias : (string) $ser->alias;
 
-		// WORKS
-		$wpdb->insert( $wpdb->prefix . 'terms', array(
-			'name' => $series["series"][ (int) $sermon->id ]["name"],
-			'slug' => $series["series"][ (int) $sermon->id ]["alias"]
-		), array(
-			'%s',
-			'%s'
-		) );
+		if ( ! $id = term_exists( $mapping["series"][ (int) $ser->id ]["name"], 'wpfc_sermon_series' ) ) {
+			$id = wp_insert_term(
+				$mapping["series"][ (int) $ser->id ]["name"],
+				'wpfc_sermon_series'
+			);
 
-		$series["series"][ (int) $sermon->id ]["newid"] = (int) $wpdb->insert_id;
+			if ( $id instanceof WP_Error ) {
+				var_dump( $id );
+				exit;
+			}
 
-		$wpdb->insert( $wpdb->prefix . 'term_taxonomy', array(
-			'term_taxonomy_id' => (int) $wpdb->insert_id,
-			'term_id'          => (int) $wpdb->insert_id,
-			'taxonomy'         => 'wpfc_sermon_series',
-			'description'      => '',
-			'parent'           => 0,
-			'count'            => 0
-		), array(
-			'%d',
-			'%d',
-			'%s',
-			'%s',
-			'%d',
-			'%d'
-		) );
+			$id = $id['term_id'];
+		} else {
+			$id = intval( $id['term_id'] );
+		}
+
+		$mapping["series"][ (int) $ser->id ]["newid"] = (int) $id;
 	}
 
+	// import preachers
 	foreach ( $xml->teachtable as $teacher ) {
-		$series["teacher"][ (int) $teacher->id ]["name"]     = ! empty( (string) $teacher->teacher_name ) ? (string) $teacher->teacher_name : (string) $teacher->name;
-		$series["teacher"][ (int) $teacher->id ]["lastname"] = (string) $teacher->lastname;
-		$series["teacher"][ (int) $teacher->id ]["alias"]    = ! empty( (string) $teacher->teacher_alias ) ? (string) $teacher->teacher_alias : (string) $teacher->alias;
-		$series["teacher"][ (int) $teacher->id ]["image"]    = (string) $teacher->teacher_image_lrg;
+		$mapping["teacher"][ (int) $teacher->id ]["name"]     = ! empty( (string) $teacher->teacher_name ) ? (string) $teacher->teacher_name : (string) $teacher->name;
+		$mapping["teacher"][ (int) $teacher->id ]["lastname"] = (string) $teacher->lastname;
+		$mapping["teacher"][ (int) $teacher->id ]["alias"]    = ! empty( (string) $teacher->teacher_alias ) ? (string) $teacher->teacher_alias : (string) $teacher->alias;
+		$mapping["teacher"][ (int) $teacher->id ]["image"]    = (string) $teacher->teacher_image_lrg;
 
-		// WORKS
-		$wpdb->insert( $wpdb->prefix . 'terms', array(
-			'name' => $series["teacher"][ (int) $teacher->id ]["name"] . ' ' . (string) $teacher->lastname,
-			'slug' => $series["teacher"][ (int) $teacher->id ]["alias"]
-		), array(
-			'%s',
-			'%s'
-		) );
+		if ( ! $id = term_exists( $mapping["teacher"][ (int) $teacher->id ]["name"] . ' ' . (string) $teacher->lastname, 'wpfc_preacher' ) ) {
+			$id = wp_insert_term(
+				$mapping["teacher"][ (int) $teacher->id ]["name"] . ' ' . (string) $teacher->lastname,
+				'wpfc_preacher'
+			);
 
-		$series["teacher"][ (int) $teacher->id ]["newid"] = (int) $wpdb->insert_id;
+			if ( $id instanceof WP_Error ) {
+				var_dump( $id );
+				exit;
+			}
 
-		$wpdb->insert( $wpdb->prefix . 'term_taxonomy', array(
-			'term_taxonomy_id' => (int) $wpdb->insert_id,
-			'term_id'          => (int) $wpdb->insert_id,
-			'taxonomy'         => 'wpfc_preacher',
-			'description'      => '',
-			'parent'           => 0,
-			'count'            => 0
-		), array(
-			'%d',
-			'%d',
-			'%s',
-			'%s',
-			'%d',
-			'%d'
-		) );
+			$id = $id['term_id'];
+		} else {
+			$id = intval( $id['term_id'] );
+		}
+
+		$mapping["teacher"][ (int) $teacher->id ]["newid"] = (int) $id;
 	}
 
+	// import ministries (service types)
 	foreach ( $xml->mintable as $ministry ) {
-		$series["ministry"][ (int) $ministry->id ]["name"]  = ! empty( (string) $ministry->ministry_name ) ? (string) $ministry->ministry_name : (string) $ministry->name;
-		$series["ministry"][ (int) $ministry->id ]["alias"] = ! empty( (string) $ministry->ministry_alias ) ? (string) $ministry->ministry_alias : (string) $ministry->alias;
+		$mapping["ministry"][ (int) $ministry->id ]["name"]  = ! empty( (string) $ministry->ministry_name ) ? (string) $ministry->ministry_name : (string) $ministry->name;
+		$mapping["ministry"][ (int) $ministry->id ]["alias"] = ! empty( (string) $ministry->ministry_alias ) ? (string) $ministry->ministry_alias : (string) $ministry->alias;
 
-		// WORKS
-		$wpdb->insert( $wpdb->prefix . 'terms', array(
-			'name' => $series["ministry"][ (int) $ministry->id ]["name"],
-			'slug' => $series["ministry"][ (int) $ministry->id ]["alias"]
-		), array(
-			'%s',
-			'%s'
-		) );
+		if ( ! $id = term_exists( $mapping["ministry"][ (int) $ministry->id ]["name"], 'wpfc_service_type' ) ) {
+			$id = wp_insert_term(
+				$mapping["ministry"][ (int) $ministry->id ]["name"],
+				'wpfc_service_type'
+			);
 
-		$series["ministry"][ (int) $ministry->id ]["newid"] = (int) $wpdb->insert_id;
+			if ( $id instanceof WP_Error ) {
+				var_dump( $id );
+				exit;
+			}
 
-		$wpdb->insert( $wpdb->prefix . 'term_taxonomy', array(
-			'term_taxonomy_id' => (int) $wpdb->insert_id,
-			'term_id'          => (int) $wpdb->insert_id,
-			'taxonomy'         => 'wpfc_service_type',
-			'description'      => '',
-			'parent'           => 0,
-			'count'            => 0
-		), array(
-			'%d',
-			'%d',
-			'%s',
-			'%s',
-			'%d',
-			'%d'
-		) );
+			$id = $id['term_id'];
+		} else {
+			$id = intval( $id['term_id'] );
+		}
+
+		$mapping["ministry"][ (int) $ministry->id ]["newid"] = (int) $id;
 	}
 
-	$series['study_book'] = array(
+	// recreate Preachit book ordering
+	$mapping['study_book'] = array(
+		array( // books start at 1
+			'name' => null
+		),
 		array(
 			'name' => 'Genesis',
 		),
@@ -533,162 +513,103 @@ function import( $file ) {
 		),
 	);
 
-	foreach ( $series['study_book'] as $key => $book ) {
+	// import books
+	foreach ( $mapping['study_book'] as $key => $book ) {
+		if ( $book['name'] === null ) { // start from 1, not 0
+			continue;
+		}
 
-		$wpdb->insert( $wpdb->prefix . 'terms', array(
-			'name' => $book['name'],
-			'slug' => strtolower( str_replace( ' ', '-', $book['name'] ) ),
-		), array(
-			'%s',
-			'%s'
-		) );
+		if ( ! $id = term_exists( $book['name'], 'wpfc_bible_book' ) ) {
+			$id = wp_insert_term(
+				$book['name'],
+				'wpfc_bible_book'
+			);
 
-		$series['study_book'][ $key ]['newid'] = (int) $wpdb->insert_id;
+			if ( $id instanceof WP_Error ) {
+				var_dump( $id );
+				exit;
+			}
 
-		$wpdb->insert( $wpdb->prefix . 'term_taxonomy', array(
-			'term_taxonomy_id' => (int) $wpdb->insert_id,
-			'term_id'          => (int) $wpdb->insert_id,
-			'taxonomy'         => 'wpfc_bible_book',
-			'description'      => '',
-			'parent'           => 0,
-			'count'            => 0
-		), array(
-			'%d',
-			'%d',
-			'%s',
-			'%s',
-			'%d',
-			'%d'
-		) );
+			$id = $id['term_id'];
+		} else {
+			$id = intval( $id['term_id'] );
+		}
+
+		$mapping['study_book'][ $key ]['newid'] = (int) $id;
 	}
 
+	// import sermons
 	foreach ( $xml->mestable as $message ) {
-		$series["message"][ (int) $message->id ]["title"]             = ! empty( (string) $message->study_name ) ? (string) $message->study_name : (string) $message->name;
-		$series["message"][ (int) $message->id ]["series"]            = (string) $message->series;
-		$series["message"][ (int) $message->id ]["teacher"]           = (string) $message->teacher;
-		$series["message"][ (int) $message->id ]["study_description"] = ! empty( (string) $message->study_description ) ? (string) $message->study_description : (string) $message->description;
-		$series["message"][ (int) $message->id ]["study_text"]        = ! empty( (string) $message->study_text ) ? (string) $message->study_text : '';
-		$series["message"][ (int) $message->id ]["study_alias"]       = ! empty( (string) $message->study_alias ) ? (string) $message->study_alias : (string) $message->alias;
-		$series["message"][ (int) $message->id ]["text"]              = (string) $message->text;
-		$series["message"][ (int) $message->id ]["ministry"]          = (string) $message->ministry;
-		$series["message"][ (int) $message->id ]["date"]              = ! empty( (string) $message->study_date ) ? (string) $message->study_date : (string) $message->date;
-		$series["message"][ (int) $message->id ]["study_book"]        = (string) $message->study_book;
-		$series["message"][ (int) $message->id ]["ref_ch_beg"]        = (string) $message->ref_ch_beg;
-		$series["message"][ (int) $message->id ]["ref_ch_end"]        = (string) $message->ref_ch_end;
-		$series["message"][ (int) $message->id ]["ref_vs_beg"]        = (string) $message->ref_vs_beg;
-		$series["message"][ (int) $message->id ]["ref_vs_end"]        = (string) $message->ref_vs_end;
-		$series["message"][ (int) $message->id ]["audio_link"]        = (string) $message->audio_link;
+		$mapping["message"][ (int) $message->id ]["title"]             = ! empty( (string) $message->study_name ) ? (string) $message->study_name : (string) $message->name;
+		$mapping["message"][ (int) $message->id ]["series"]            = (string) $message->series;
+		$mapping["message"][ (int) $message->id ]["teacher"]           = (string) $message->teacher;
+		$mapping["message"][ (int) $message->id ]["study_description"] = ! empty( (string) $message->study_description ) ? (string) $message->study_description : (string) $message->description;
+		$mapping["message"][ (int) $message->id ]["study_text"]        = ! empty( (string) $message->study_text ) ? (string) $message->study_text : '';
+		$mapping["message"][ (int) $message->id ]["study_alias"]       = ! empty( (string) $message->study_alias ) ? (string) $message->study_alias : (string) $message->alias;
+		$mapping["message"][ (int) $message->id ]["text"]              = (string) $message->text;
+		$mapping["message"][ (int) $message->id ]["ministry"]          = (string) $message->ministry;
+		$mapping["message"][ (int) $message->id ]["date"]              = ! empty( (string) $message->study_date ) ? (string) $message->study_date : (string) $message->date;
+		$mapping["message"][ (int) $message->id ]["study_book"]        = (string) $message->study_book;
+		$mapping["message"][ (int) $message->id ]["ref_ch_beg"]        = (string) $message->ref_ch_beg;
+		$mapping["message"][ (int) $message->id ]["ref_ch_end"]        = (string) $message->ref_ch_end;
+		$mapping["message"][ (int) $message->id ]["ref_vs_beg"]        = (string) $message->ref_vs_beg;
+		$mapping["message"][ (int) $message->id ]["ref_vs_end"]        = (string) $message->ref_vs_end;
+		$mapping["message"][ (int) $message->id ]["audio_link"]        = (string) $message->audio_link;
+
+		if ( ! $id = post_exists( $mapping["message"][ (int) $message->id ]["title"], '', $mapping["message"][ (int) $message->id ]["date"] ) ) {
+			$id = wp_insert_post( array(
+				'post_date'         => $mapping["message"][ (int) $message->id ]["date"],
+				'post_content'      => '&nbsp;',
+				'post_title'        => $mapping["message"][ (int) $message->id ]["title"],
+				'post_status'       => ( (string) $message->published == 1 ) ? 'publish' : 'draft',
+				'post_type'         => 'wpfc_sermon',
+				'comment_status'    => ( (string) $message->comments == 1 ) ? 'open' : 'closed',
+				'ping_status'       => 'closed',
+				'post_modified'     => $mapping["message"][ (int) $message->id ]["date"],
+				'post_modified_gmt' => $mapping["message"][ (int) $message->id ]["date"],
+			) );
+		}
 
 		$message->series     = '{"0": "' . $message->series . '"}';
 		$message->study_book = '{"0": "' . $message->study_book . '"}';
 
-		// get the latest post id
-		$post_id = $wpdb->get_var( 'SELECT `ID` FROM ' . $wpdb->prefix . 'posts ORDER BY `ID` DESC LIMIT 1' );
-		$post_id = $post_id === null ? 1 : (int) $post_id + 1;
-
-		$wpdb->insert( $wpdb->prefix . 'posts', array(
-			'post_author'           => get_current_user_id(),
-			'post_date'             => $series["message"][ (int) $message->id ]["date"],
-			'post_date_gmt'         => $series["message"][ (int) $message->id ]["date"],
-			'post_content'          => '',
-			'post_title'            => $series["message"][ (int) $message->id ]["title"],
-			'post_excerpt'          => '',
-			'post_status'           => ( (string) $message->published == 1 ) ? 'publish' : 'draft',
-			'comment_status'        => ( (string) $message->comments == 1 ) ? 'open' : 'closed',
-			'ping_status'           => 'closed',
-			'post_password'         => '',
-			'post_name'             => $series["message"][ (int) $message->id ]["study_alias"],
-			'to_ping'               => '',
-			'pinged'                => '',
-			'post_modified'         => $series["message"][ (int) $message->id ]["date"],
-			'post_modified_gmt'     => $series["message"][ (int) $message->id ]["date"],
-			'post_content_filtered' => '',
-			'post_parent'           => 0,
-			'guid'                  => get_site_url() . '/?post_type=wpfc_sermon&#038;p=' . $post_id,
-			'menu_order'            => 0,
-			'post_type'             => 'wpfc_sermon',
-			'post_mime_type'        => '',
-			'comment_count'         => 0
-		), array(
-			'%d',
-			'%s',
-			'%s',
-			'%s',
-			'%s',
-			'%s',
-			'%s',
-			'%s',
-			'%s',
-			'%s',
-			'%s',
-			'%s',
-			'%s',
-			'%s',
-			'%s',
-			'%s',
-			'%d',
-			'%s',
-			'%d',
-			'%s',
-			'%s',
-			'%d',
-		) );
-
-		$postdb_id = $wpdb->insert_id;
-
 		foreach (
 			array(
-				'sermon_date'              => strtotime( $series["message"][ (int) $message->id ]["date"] ),
+				'sermon_date'              => strtotime( $mapping["message"][ (int) $message->id ]["date"] ),
 				'wpfc_service_type_select' => 'a:0:{}',
-				'bible_passage'            => (string) $series['study_book'][ json_decode( $message->study_book )->{'0'} == 0 ? json_decode( $message->study_book )->{'0'} : json_decode( $message->study_book )->{'0'} - 1 ]["name"] . ' ' . (string) $message->ref_ch_beg . ':' . (string) $message->ref_vs_beg . '-' . (string) $message->ref_vs_end . ( (string) $message->ref_ch_beg != (string) $message->ref_ch_end ? ':' . (string) $message->ref_ch_end : '' ),
-				'sermon_description'       => $series["message"][ (int) $message->id ]["study_description"],
-				'sermon_audio'             => (string) $message->audio_link
+				'bible_passage'            => (string) $mapping['study_book'][ json_decode( $message->study_book )->{'0'} ]["name"] . ' ' . (string) $message->ref_ch_beg . ':' . (string) $message->ref_vs_beg . '-' . (string) $message->ref_vs_end . ( (string) $message->ref_ch_beg != (string) $message->ref_ch_end ? ':' . (string) $message->ref_ch_end : '' ),
+				'sermon_description'       => $mapping["message"][ (int) $message->id ]["study_description"],
+				'sermon_audio'             => (string) $message->audio_link,
+				'Views'                    => (int) $message->hits,
 			) as $key => $value
 		) {
-			$wpdb->insert( $wpdb->prefix . 'postmeta', array(
-				'post_id'    => $postdb_id,
-				'meta_key'   => $key,
-				'meta_value' => $value
-			), array(
-				'%d',
-				'%s',
-				( $key == 'sermon date' ? '%d' : '%s' )
-			) );
+			update_post_meta( $id, $key, $value );
 		}
 
 		foreach ( array( 'teacher', 'series', 'study_book', 'ministry' ) as $data ) {
-			foreach ( json_decode( $message->$data ) as $key => $data_id ) {
-				if ( $data_id == '' ) {
+			foreach ( json_decode( $message->$data ) as $data_id ) {
+				if ( ! $data_id ) {
 					continue;
 				}
-				$wpdb->insert( $wpdb->prefix . 'term_relationships', array(
-					'object_id'        => $postdb_id,
-					'term_taxonomy_id' => $series[ $data ][ $data === 'study_book' && $data_id != 0 ? $data_id - 1 : $data_id ]['newid'],
-					'term_order'       => $key
-				), array(
-					'%d',
-					'%d',
-					'%d'
-				) );
 
-				$count = $wpdb->get_var( '
-						SELECT `count`+1 
-						FROM `' . $wpdb->prefix . 'term_taxonomy`
-						WHERE `term_id` = ' . $series[ $data ][ $data_id ]['newid']
-				);
+				switch ( $data ) {
+					case 'teacher':
+						$taxonomy = 'wpfc_preacher';
+						break;
+					case 'series':
+						$taxonomy = 'wpfc_sermon_series';
+						break;
+					case 'study_book':
+						$taxonomy = 'wpfc_bible_book';
+						break;
+					case 'ministry':
+						$taxonomy = 'wpfc_service_type';
+						break;
+					default:
+						$taxonomy = null;
+				}
 
-				$wpdb->update( $wpdb->prefix . 'term_taxonomy', array(
-					'count' => $count
-				), array(
-					'term_id' => $series[ $data ][ $data_id ]['newid']
-				), array(
-					'%d'
-				), array(
-					'%d'
-				) );
-
-				$wpdb->flush();
-
+				wp_set_object_terms( $id, $mapping[ $data ][ $data_id ]['newid'], $taxonomy );
 			}
 		}
 	}
